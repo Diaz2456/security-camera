@@ -2,7 +2,8 @@ const express = require('express');
 const mongoose = require('mongoose');
 const Event = require('../models/Event');
 const AlertImage = require('../models/AlertImage');
-const { cameraAuthMiddleware } = require('../middleware/auth');
+const Config = require('../models/Config');
+const { authMiddleware, cameraAuthMiddleware } = require('../middleware/auth');
 const { compressImage, createThumbnail } = require('../utils/imageProcessor');
 
 const router = express.Router();
@@ -56,6 +57,37 @@ router.post('/ingest', cameraAuthMiddleware, async (req, res) => {
     res.json({ success: true, eventId: event._id });
   } catch (err) {
     console.error('Ingest error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// === RESET COMMAND ===
+router.post('/command', authMiddleware, async (req, res) => {
+  try {
+    const { apiKey, type } = req.body;
+    if (!apiKey || !type) {
+      return res.status(400).json({ error: 'apiKey and type required' });
+    }
+    await Config.set('cmd:' + apiKey, { type, createdAt: new Date().toISOString() });
+    console.log(`Command stored for ${apiKey}: ${type}`);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.get('/pending-command', cameraAuthMiddleware, async (req, res) => {
+  try {
+    const apiKey = req.query.apiKey || req.headers['x-api-key'];
+    const key = 'cmd:' + apiKey;
+    const cmd = await Config.get(key, null);
+    if (cmd) {
+      await Config.set(key, null);
+      res.json({ command: cmd.type });
+    } else {
+      res.json({ command: null });
+    }
+  } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
