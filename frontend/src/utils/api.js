@@ -49,5 +49,5 @@ export const updateConfig = (cfg) => request('PUT', '/config', cfg);
 
 export const getStorageUsage = () => request('GET', '/storage/usage');
 
-export const sendCommand = (apiKey, type) =>
-  request('POST', '/camera/command', { apiKey, type });
+export const sendCommand = (type) =>
+  request('POST', '/camera/command', { type });

@@ -64,12 +64,16 @@ router.post('/ingest', cameraAuthMiddleware, async (req, res) => {
 // === RESET COMMAND ===
 router.post('/command', authMiddleware, async (req, res) => {
   try {
-    const { apiKey, type } = req.body;
-    if (!apiKey || !type) {
-      return res.status(400).json({ error: 'apiKey and type required' });
+    const { type } = req.body;
+    if (!type) {
+      return res.status(400).json({ error: 'type required' });
+    }
+    const apiKey = process.env.CAMERA_API_KEY;
+    if (!apiKey) {
+      return res.status(500).json({ error: 'CAMERA_API_KEY not configured on server' });
     }
     await Config.set('cmd:' + apiKey, { type, createdAt: new Date().toISOString() });
-    console.log(`Command stored for ${apiKey}: ${type}`);
+    console.log(`Command stored for camera: ${type}`);
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: err.message });

@@ -35,11 +35,15 @@ const styles = {
     border: '1px solid #2a2a4a', background: 'transparent', color: '#8899aa',
     cursor: 'pointer', fontSize: '0.75rem',
   },
-  pagination: { display: 'flex', justifyContent: 'center', gap: '0.5rem', marginTop: '1.5rem' },
+  pagination: { display: 'flex', justifyContent: 'center', gap: '0.5rem', marginTop: '1.5rem', flexWrap: 'wrap' },
   pageBtn: (active) => ({
     padding: '6px 12px', borderRadius: '6px', border: '1px solid #2a2a4a',
     background: active ? '#e94560' : 'transparent', color: '#e0e0e0', cursor: 'pointer',
   }),
+  disabledBtn: {
+    padding: '6px 12px', borderRadius: '6px', border: '1px solid #2a2a4a',
+    background: 'transparent', color: '#445', cursor: 'default', opacity: 0.4,
+  },
 };
 
 function EventLog() {
@@ -91,6 +95,14 @@ function EventLog() {
 
   const pages = Math.ceil(total / 20);
 
+  const getPageRange = () => {
+    const range = [];
+    const start = Math.max(1, page - 4);
+    const end = Math.min(pages, page + 5);
+    for (let i = start; i <= end; i++) range.push(i);
+    return range;
+  };
+
   const types = ['', 'motion', 'person', 'animal', 'package', 'vehicle', 'stranger'];
 
   return (
@@ -107,7 +119,7 @@ function EventLog() {
         ))}
       </div>
       <div style={{ color: '#667', marginBottom: '1rem', fontSize: '0.85rem' }}>
-        {total} events
+        {total} events &mdash; page {page} of {pages}
       </div>
       <div style={styles.grid}>
         {events.map((ev) => (
@@ -141,7 +153,14 @@ function EventLog() {
       </div>
       {pages > 1 && (
         <div style={styles.pagination}>
-          {Array.from({ length: Math.min(pages, 10) }, (_, i) => i + 1).map((p) => (
+          <button
+            style={page <= 1 ? styles.disabledBtn : styles.pageBtn(false)}
+            disabled={page <= 1}
+            onClick={() => setPage(page - 1)}
+          >
+            &laquo; Prev
+          </button>
+          {getPageRange().map((p) => (
             <button
               key={p}
               style={styles.pageBtn(page === p)}
@@ -150,6 +169,13 @@ function EventLog() {
               {p}
             </button>
           ))}
+          <button
+            style={page >= pages ? styles.disabledBtn : styles.pageBtn(false)}
+            disabled={page >= pages}
+            onClick={() => setPage(page + 1)}
+          >
+            Next &raquo;
+          </button>
         </div>
       )}
     </div>

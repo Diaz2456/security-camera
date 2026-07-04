@@ -36,7 +36,6 @@ function Settings() {
     storageAlertThreshold: 80,
   });
   const [saved, setSaved] = useState(false);
-  const [apiKey, setApiKey] = useState('');
   const [cmdStatus, setCmdStatus] = useState('');
 
   useEffect(() => {
@@ -56,14 +55,10 @@ function Settings() {
   };
 
   const handleReset = async () => {
-    if (!apiKey.trim()) {
-      setCmdStatus('Enter the ESP32 API key first');
-      return;
-    }
     if (!window.confirm('This will reset the ESP32 credentials (WiFi + admin) and reboot it. Continue?')) return;
     try {
       setCmdStatus('Sending reset command...');
-      await sendCommand(apiKey.trim(), 'reset');
+      await sendCommand('reset');
       setCmdStatus('Reset command sent! ESP32 will reset on next check-in.');
     } catch (err) {
       setCmdStatus('Failed: ' + err.message);
@@ -100,19 +95,11 @@ function Settings() {
 
       <div style={{ ...styles.card, border: '1px solid #dc2626' }}>
         <div style={{ color: '#f87171', fontWeight: 'bold', marginBottom: '0.5rem' }}>Danger Zone</div>
-        <label style={styles.label}>ESP32 API Key</label>
-        <input
-          style={styles.inputSmall}
-          type="text"
-          placeholder="Enter the API key from your ESP32 config"
-          value={apiKey}
-          onChange={(e) => setApiKey(e.target.value)}
-        />
         <button style={styles.dangerButton} onClick={handleReset}>
           Reset ESP32 Credentials
         </button>
         <div style={styles.dangerText}>
-          Sends a command to reset WiFi + admin credentials on the ESP32. The camera will reboot into AP mode.
+          Sends a command to reset WiFi + admin credentials on the ESP32. The camera will reboot into AP mode. You must be logged in as admin.
         </div>
         {cmdStatus && <div style={styles.success}>{cmdStatus}</div>}
       </div>
