@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import LiveView from './LiveView';
 import EventLog from './EventLog';
 import FaceManagement from './FaceManagement';
@@ -39,10 +39,61 @@ const styles = {
     cursor: 'pointer',
   },
   content: { padding: '1.5rem' },
+  alertBar: {
+    position: 'fixed',
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 9999,
+    padding: '14px 20px',
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    cursor: 'pointer',
+    fontWeight: 'bold',
+    fontSize: '0.95rem',
+    boxShadow: '0 2px 12px rgba(0,0,0,0.5)',
+    transition: 'transform 0.3s',
+  },
+  alertStranger: { background: '#dc2626', color: '#fff' },
+  alertMotion: { background: '#e94560', color: '#fff' },
+  alertTime: { fontSize: '0.75rem', opacity: 0.8, fontWeight: 'normal' },
 };
 
 function Dashboard({ token, socket, onLogout }) {
   const [activeTab, setActiveTab] = useState('Live View');
+  const [alert, setAlert] = useState(null);
+
+  useEffect(() => {
+    if (!socket) return;
+    const onStranger = (data) => {
+      setAlert({
+        type: 'stranger',
+        message: 'STRANGER DETECTED!',
+        time: new Date(data.timestamp).toLocaleTimeString(),
+        image: data.imageBase64,
+      });
+    };
+    const onEvent = (data) => {
+      setAlert({
+        type: data.motionType || 'motion',
+        message: `${(data.motionType || 'Motion').toUpperCase()} event`,
+        time: new Date(data.createdAt).toLocaleTimeString(),
+      });
+    };
+    socket.on('stranger-alert', onStranger);
+    socket.on('new-event', onEvent);
+    return () => {
+      socket.off('stranger-alert', onStranger);
+      socket.off('new-event', onEvent);
+    };
+  }, [socket]);
+
+  useEffect(() => {
+    if (!alert) return;
+    const timer = setTimeout(() => setAlert(null), 6000);
+    return () => clearTimeout(timer);
+  }, [alert]);
 
   const renderTab = () => {
     switch (activeTab) {
@@ -57,6 +108,21 @@ function Dashboard({ token, socket, onLogout }) {
 
   return (
     <div style={styles.container}>
+      {alert && (
+        <div
+          style={{
+            ...styles.alertBar,
+            ...(alert.type === 'stranger' ? styles.alertStranger : styles.alertMotion),
+          }}
+          onClick={() => setAlert(null)}
+        >
+          <span>{alert.message}</span>
+          <span style={styles.alertTime}>
+            {alert.time}
+            {alert.type === 'stranger' && alert.image && ' | Click to dismiss'}
+          </span>
+        </div>
+      )}
       <div style={styles.nav}>
         <div style={styles.logo}>Security Cam</div>
         {tabs.map((t) => (
