@@ -109,8 +109,8 @@ void setDefaults() {
   cfg.tzOffset = 0;
   cfg.captureInterval = 2000;
   strlcpy(cfg.ntpServer, "pool.ntp.org", sizeof(cfg.ntpServer));
-  strlcpy(cfg.serverUrl, "", sizeof(cfg.serverUrl));
-  strlcpy(cfg.apiKey, "", sizeof(cfg.apiKey));
+  strlcpy(cfg.serverUrl, "https://security-camera-api.onrender.com", sizeof(cfg.serverUrl));
+  strlcpy(cfg.apiKey, "944426cc151ab6f1a157179da296513103ee66494d6f18ff321d2e06862fd2c2", sizeof(cfg.apiKey));
 }
 
 void initFS() {
@@ -544,6 +544,14 @@ void handleRoot() {
   html += "<div class='c' style='text-align:center'>";
   html += "<a href='/settings' style='color:#e94560;font-size:16px'>Settings</a>";
   html += "</div>";
+
+  // WiFi reset button (always visible)
+  html += "<div class='c' style='text-align:center;border:1px solid #dc2626'>";
+  html += "<form method='POST' action='/resetwifi' onsubmit=\"return confirm('Reset WiFi credentials and reboot to AP mode?')\">";
+  html += "<button type='submit' style='width:100%;padding:12px;background:#dc2626;color:#fff;border:none;border-radius:6px;cursor:pointer'>Reset WiFi (AP Mode)</button>";
+  html += "</form>";
+  html += "</div>";
+
   html += "</body></html>";
   server.send(200, "text/html", html);
 }
@@ -696,6 +704,15 @@ void handleReset() {
   ESP.restart();
 }
 
+void handleResetWiFi() {
+  if (!checkAuth()) return;
+  prefs.remove("ssid");
+  prefs.remove("pass");
+  server.send(200, "text/html", "<html><body style='font-family:sans-serif;padding:40px;color:#fff;background:#1a1a2e'><h2>WiFi cleared! Rebooting to AP mode...</h2><p>Connect to <b>" AP_SSID "</b> (password: " AP_PASS ")</p></body></html>");
+  delay(1000);
+  ESP.restart();
+}
+
 void handleNotFound() {
   if (server.uri().startsWith("/captures/")) {
     handleCapture();
@@ -766,6 +783,7 @@ void setup() {
   server.on("/cam", handleCam);
   server.on("/stream", handleStream);
   server.on("/reset", handleReset);
+  server.on("/resetwifi", handleResetWiFi);
   server.on("/resetcreds", handleResetCreds);
   server.on("/restart", []() {
     if (!checkAuth()) return;
@@ -800,8 +818,8 @@ void loop() {
 
   unsigned long now = millis();
 
-  // Poll for remote commands every 30s
-  if (now - lastCommandCheck > 30000) {
+  // Poll for remote commands every 10s
+  if (now - lastCommandCheck > 10000) {
     lastCommandCheck = now;
     checkPendingCommand();
   }
