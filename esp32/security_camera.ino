@@ -86,6 +86,7 @@ bool apMode = false;
 bool timeSynced = false;
 unsigned long lastCapture = 0;
 unsigned long lastCommandCheck = 0;
+unsigned long lastHeartbeat = 0;
 
 // Motion detection
 uint8_t* prevFrame = NULL;
@@ -415,6 +416,7 @@ void uploadCapture(const uint8_t* jpg, size_t len, const char* fname) {
   free(b64);
   if (bodyLen >= 51199) { free(body); return; }
   httpClient.begin(url);
+  httpClient.setInsecure();
   httpClient.addHeader("Content-Type", "application/json");
   int code = httpClient.POST((uint8_t*)body, strlen(body));
   if (code != 200) {
@@ -727,6 +729,7 @@ void checkPendingCommand() {
   char url[320];
   snprintf(url, sizeof(url), "%s/api/camera/pending-command?apiKey=%s", cfg.serverUrl, cfg.apiKey);
   httpClient.begin(url);
+  httpClient.setInsecure();
   int code = httpClient.GET();
   if (code == 200) {
     String body = httpClient.getString();
@@ -850,7 +853,21 @@ void loop() {
           delay(500);
         } else {
           handleFlash(false);
-          esp_camera_fb_return(fb);
+          // Heartbeat capture every 120s even without motion
+          if (now - lastHeartbeat > 120000) {
+            lastHeartbeat = now;
+            esp_camera_fb_return(fb);
+            camera_fb_t* cap = esp_camera_fb_get();
+            if (cap) {
+              String fname = saveCapture();
+              if (fname.length() > 0) {
+                addEvent(fname.c_str(), 0);
+              }
+              esp_camera_fb_return(cap);
+            }
+          } else {
+            esp_camera_fb_return(fb);
+          }
         }
       }
     }
