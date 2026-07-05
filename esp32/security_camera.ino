@@ -18,6 +18,7 @@
 
 #include <esp_camera.h>
 #include <WiFi.h>
+#include <WiFiClientSecure.h>
 #include <WebServer.h>
 #include <DNSServer.h>
 #include <HTTPClient.h>
@@ -415,8 +416,9 @@ void uploadCapture(const uint8_t* jpg, size_t len, const char* fname) {
     cfg.apiKey, b64);
   free(b64);
   if (bodyLen >= 51199) { free(body); return; }
-  httpClient.begin(url);
-  httpClient.setInsecure();
+  WiFiClientSecure client;
+  client.setInsecure();
+  httpClient.begin(client, url);
   httpClient.addHeader("Content-Type", "application/json");
   int code = httpClient.POST((uint8_t*)body, strlen(body));
   if (code != 200) {
@@ -728,8 +730,9 @@ void checkPendingCommand() {
   if (strlen(cfg.serverUrl) == 0 || WiFi.status() != WL_CONNECTED) return;
   char url[320];
   snprintf(url, sizeof(url), "%s/api/camera/pending-command?apiKey=%s", cfg.serverUrl, cfg.apiKey);
-  httpClient.begin(url);
-  httpClient.setInsecure();
+  WiFiClientSecure client;
+  client.setInsecure();
+  httpClient.begin(client, url);
   int code = httpClient.GET();
   if (code == 200) {
     String body = httpClient.getString();
