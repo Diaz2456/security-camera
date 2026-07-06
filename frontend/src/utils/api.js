@@ -51,3 +51,6 @@ export const getStorageUsage = () => request('GET', '/storage/usage');
 
 export const sendCommand = (type) =>
   request('POST', '/camera/command', { type });
+
+export const getCameraStatus = () =>
+  request('GET', '/camera/status');

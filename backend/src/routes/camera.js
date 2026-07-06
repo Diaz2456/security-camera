@@ -15,6 +15,12 @@ router.post('/ingest', cameraAuthMiddleware, async (req, res) => {
       return res.status(400).json({ error: 'Invalid image data' });
     }
 
+    // Track camera health
+    const now = new Date();
+    await Config.set('camera:lastSeen', now.toISOString());
+    const prevCount = await Config.get('camera:uploadCount', 0);
+    await Config.set('camera:uploadCount', (prevCount || 0) + 1);
+
     const compressedImage = await compressImage(image);
     const thumbnail = await createThumbnail(compressedImage);
 
@@ -57,6 +63,31 @@ router.post('/ingest', cameraAuthMiddleware, async (req, res) => {
     res.json({ success: true, eventId: event._id });
   } catch (err) {
     console.error('Ingest error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// === CAMERA STATUS (for frontend to check camera connectivity) ===
+router.get('/status', authMiddleware, async (req, res) => {
+  try {
+    const lastSeen = await Config.get('camera:lastSeen', null);
+    const uploadCount = await Config.get('camera:uploadCount', 0);
+    const eventCount = await Event.countDocuments();
+    let isOnline = false;
+    let secondsAgo = null;
+    if (lastSeen) {
+      secondsAgo = Math.floor((Date.now() - new Date(lastSeen).getTime()) / 1000);
+      isOnline = secondsAgo < 300; // online if seen within 5 minutes
+    }
+    res.json({
+      isOnline,
+      lastSeen,
+      secondsAgo,
+      uploadCount,
+      eventCount,
+      expectedApiKey: process.env.CAMERA_API_KEY ? process.env.CAMERA_API_KEY.substring(0, 8) + '...' : null,
+    });
+  } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });

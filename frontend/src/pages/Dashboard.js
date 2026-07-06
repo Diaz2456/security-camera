@@ -4,6 +4,7 @@ import EventLog from './EventLog';
 import FaceManagement from './FaceManagement';
 import StorageMonitor from './StorageMonitor';
 import Settings from './Settings';
+import { getCameraStatus } from '../utils/api';
 
 const tabs = ['Live View', 'Events', 'Faces', 'Storage', 'Settings'];
 
@@ -58,11 +59,35 @@ const styles = {
   alertStranger: { background: '#dc2626', color: '#fff' },
   alertMotion: { background: '#e94560', color: '#fff' },
   alertTime: { fontSize: '0.75rem', opacity: 0.8, fontWeight: 'normal' },
+  statusBar: {
+    background: '#16213e', padding: '10px 20px', display: 'flex', gap: '1.5rem',
+    flexWrap: 'wrap', alignItems: 'center', borderBottom: '1px solid #2a2a4a',
+    fontSize: '0.85rem',
+  },
+  statusDot: (on) => ({
+    width: '10px', height: '10px', borderRadius: '50%',
+    background: on ? '#4ade80' : '#e94560', display: 'inline-block', marginRight: '0.3rem',
+  }),
 };
 
 function Dashboard({ token, socket, onLogout }) {
   const [activeTab, setActiveTab] = useState('Live View');
   const [alert, setAlert] = useState(null);
+  const [camStatus, setCamStatus] = useState(null);
+
+  useEffect(() => {
+    const fetch = async () => {
+      try {
+        const s = await getCameraStatus();
+        setCamStatus(s);
+      } catch (e) {
+        // ignore
+      }
+    };
+    fetch();
+    const interval = setInterval(fetch, 15000);
+    return () => clearInterval(interval);
+  }, []);
 
   useEffect(() => {
     if (!socket) return;
@@ -73,6 +98,7 @@ function Dashboard({ token, socket, onLogout }) {
         time: new Date(data.timestamp).toLocaleTimeString(),
         image: data.imageBase64,
       });
+      setCamStatus((s) => s ? { ...s, isOnline: true, lastSeen: new Date().toISOString(), secondsAgo: 0 } : s);
     };
     const onEvent = (data) => {
       setAlert({
@@ -80,6 +106,7 @@ function Dashboard({ token, socket, onLogout }) {
         message: `${(data.motionType || 'Motion').toUpperCase()} event`,
         time: new Date(data.createdAt).toLocaleTimeString(),
       });
+      setCamStatus((s) => s ? { ...s, isOnline: true, lastSeen: new Date().toISOString(), secondsAgo: 0, uploadCount: (s.uploadCount || 0) + 1 } : s);
     };
     socket.on('stranger-alert', onStranger);
     socket.on('new-event', onEvent);
@@ -106,6 +133,10 @@ function Dashboard({ token, socket, onLogout }) {
     }
   };
 
+  const lastSeenStr = camStatus?.lastSeen
+    ? new Date(camStatus.lastSeen).toLocaleString()
+    : 'Never';
+
   return (
     <div style={styles.container}>
       {alert && (
@@ -123,6 +154,15 @@ function Dashboard({ token, socket, onLogout }) {
           </span>
         </div>
       )}
+      <div style={styles.statusBar}>
+        <span>
+          <span style={styles.statusDot(camStatus?.isOnline)} />
+          Camera: {camStatus?.isOnline ? 'Online' : 'Offline'}
+        </span>
+        <span>Last upload: {lastSeenStr}</span>
+        <span>Uploads: {camStatus?.uploadCount || 0}</span>
+        <span>Events: {camStatus?.eventCount || 0}</span>
+      </div>
       <div style={styles.nav}>
         <div style={styles.logo}>Security Cam</div>
         {tabs.map((t) => (
