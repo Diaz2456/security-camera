@@ -144,9 +144,9 @@ void loadConfig() {
   cfg.tzOffset = doc["tz"] | cfg.tzOffset;
   cfg.captureInterval = doc["ci"] | cfg.captureInterval;
   strlcpy(cfg.ntpServer, doc["ns"] | "pool.ntp.org", sizeof(cfg.ntpServer));
-  strlcpy(cfg.serverUrl, doc["su"] | "", sizeof(cfg.serverUrl));
-  strlcpy(cfg.apiKey, doc["ak"] | "", sizeof(cfg.apiKey));
-  Serial.println("Config loaded from SPIFFS");
+  strlcpy(cfg.serverUrl, doc["su"] | "https://security-camera-api.onrender.com", sizeof(cfg.serverUrl));
+  strlcpy(cfg.apiKey, doc["ak"] | "944426cc151ab6f1a157179da296513103ee66494d6f18ff321d2e06862fd2c2", sizeof(cfg.apiKey));
+  Serial.println("Config loaded");
 }
 
 void saveConfig() {
@@ -388,6 +388,8 @@ String saveCapture() {
   }
   if (strlen(cfg.serverUrl) > 0 && WiFi.status() == WL_CONNECTED) {
     uploadCapture(fb->buf, fb->len, fname);
+  } else {
+    Serial.println("Upload skipped: URL=" + String(cfg.serverUrl) + " WiFi=" + String(WiFi.status()));
   }
   esp_camera_fb_return(fb);
   return String(fname);
@@ -808,6 +810,12 @@ void setup() {
   SPIFFS.mkdir(CAPTURE_DIR);
 
   Serial.println("=== Ready ===");
+  Serial.print("WiFi status: ");
+  Serial.println(WiFi.status() == WL_CONNECTED ? "CONNECTED" : "NOT CONNECTED");
+  Serial.print("Server URL: ");
+  Serial.println(cfg.serverUrl);
+  Serial.print("API Key: ");
+  Serial.println(cfg.apiKey);
   Serial.print("Visit http://");
   if (WiFi.status() == WL_CONNECTED) {
     Serial.print(WiFi.localIP());
