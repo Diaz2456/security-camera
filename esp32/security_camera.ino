@@ -71,7 +71,7 @@ typedef struct {
   char ntpServer[64];
   int tzOffset;
   char serverUrl[256];
-  char apiKey[64];
+  char apiKey[96];
   int captureInterval;  // ms between captures during motion
 } config_t;
 
@@ -665,7 +665,7 @@ void handleSettings() {
   html += "<label>Time Zone Offset (hours)</label><input name='tz' type='number' min='-12' max='14' value='" + String(cfg.tzOffset) + "'>";
   html += "<label>Capture Interval (ms)</label><input name='ci' type='number' min='500' max='30000' value='" + String(cfg.captureInterval) + "'>";
   html += "<label>Server URL</label><input name='su' value='" + String(cfg.serverUrl) + "'>";
-  html += "<label>API Key</label><input name='ak' value='" + String(cfg.apiKey) + "'>";
+  html += "<label>API Key</label><input name='ak' maxlength='95' value='" + String(cfg.apiKey) + "'>";
   html += "<hr style='border-color:#2a2a4a'>";
   html += "<h3>Admin Credentials</h3>";
   html += "<label>Admin Username</label><input name='auser' value='" + adminUser + "'>";
